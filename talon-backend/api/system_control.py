@@ -1,8 +1,11 @@
+from __future__ import annotations
+
 """
 System-wide control endpoints.
 """
 
 import logging
+from typing import Optional
 
 from fastapi import APIRouter, Depends
 from pydantic import BaseModel
@@ -21,7 +24,7 @@ router = APIRouter(
 class KillSwitchRequest(BaseModel):
     active: bool
     reason: str = ""
-    updated_by: str | None = None
+    updated_by: Optional[str] = None
 
 
 @router.get("/kill-switch")

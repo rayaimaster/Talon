@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 ServiceNow ticket integration tool.
 
@@ -80,7 +82,7 @@ def _resolve_table(table: str) -> str:
     return resolved or DEFAULT_SERVICENOW_TABLE
 
 
-def _get_live_config() -> tuple[str, str, str] | None:
+def _get_live_config() -> Optional[tuple[str, str, str]]:
     if get_servicenow_mode() == "disabled":
         return None
     missing = _get_missing_live_config()

@@ -28,11 +28,11 @@ agents:
       - github_create_issue
     # LLM Provider config
     llm:
-      provider: "anthropic"           # anthropic | openai | local | gemini
-      model: "claude-3-5-haiku-20241022"
-      # api_key: override env var per-agent (optional)
+      provider: "local"               # anthropic | openai | local | gemini
+      model: "qwen/qwen3.5-9b"
+      # base_url / api_key fall back to LOCAL_LLM_BASE_URL / LOCAL_LLM_API_KEY
     # Legacy field kept for backwards compatibility
-    model: "claude-3-5-haiku-20241022"
+    model: "qwen/qwen3.5-9b"
 
   dana-helpdesk:
     name: "Dana"
@@ -58,14 +58,12 @@ agents:
       - servicenow_get_ticket
       - servicenow_search_tickets
       - servicenow_create_ticket
-    # LLM Provider config — example: OpenAI GPT-4o-mini
+    # LLM Provider config
     llm:
-      provider: "anthropic"           # switch to "openai" and set OPENAI_API_KEY to use GPT
-      model: "claude-3-5-haiku-20241022"
-      # To use OpenAI instead:
-      # provider: "openai"
-      # model: "gpt-4o-mini"
-    model: "claude-3-5-haiku-20241022"
+      provider: "local"
+      model: "qwen/qwen3.5-9b"
+      # base_url / api_key fall back to LOCAL_LLM_BASE_URL / LOCAL_LLM_API_KEY
+    model: "qwen/qwen3.5-9b"
 
   morgan-data:
     name: "Morgan"
@@ -91,16 +89,12 @@ agents:
       - memory_store
       - github_get_issue
       - github_search_issues
-    # LLM Provider config — example: Local LLM via LM Studio / Ollama
+    # LLM Provider config — Local LLM via LM Studio / Ollama
     llm:
-      provider: "anthropic"           # switch to "local" to use LM Studio / Ollama
-      model: "claude-3-5-haiku-20241022"
-      # To use LM Studio / Ollama instead:
-      # provider: "local"
-      # model: "llama-3.2-3b-instruct"   # Model loaded in LM Studio or Ollama
-      # base_url: "http://localhost:1234/v1"  # LM Studio default
-      # api_key: "lm-studio"                 # LM Studio accepts any string
-    model: "claude-3-5-haiku-20241022"
+      provider: "local"
+      model: "qwen/qwen3.5-9b"
+      # base_url / api_key fall back to LOCAL_LLM_BASE_URL / LOCAL_LLM_API_KEY
+    model: "qwen/qwen3.5-9b"
 
   casey-comms:
     name: "Casey"
@@ -124,14 +118,12 @@ agents:
       - datetime
       - memory_recall
       - memory_store
-    # LLM Provider config — example: Google Gemini
+    # LLM Provider config
     llm:
-      provider: "anthropic"           # switch to "gemini" and set GEMINI_API_KEY to use Gemini
-      model: "claude-3-5-haiku-20241022"
-      # To use Gemini instead:
-      # provider: "gemini"
-      # model: "gemini-1.5-flash"
-    model: "claude-3-5-haiku-20241022"
+      provider: "local"
+      model: "qwen/qwen3.5-9b"
+      # base_url / api_key fall back to LOCAL_LLM_BASE_URL / LOCAL_LLM_API_KEY
+    model: "qwen/qwen3.5-9b"
 
   jordan-finance:
     name: "Jordan"
@@ -157,6 +149,7 @@ agents:
       - memory_store
     # LLM Provider config
     llm:
-      provider: "anthropic"
-      model: "claude-3-5-haiku-20241022"
-    model: "claude-3-5-haiku-20241022"
+      provider: "local"
+      model: "qwen/qwen3.5-9b"
+      # base_url / api_key fall back to LOCAL_LLM_BASE_URL / LOCAL_LLM_API_KEY
+    model: "qwen/qwen3.5-9b"

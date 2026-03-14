@@ -93,8 +93,8 @@ A real-time chat UI is available at `/workspace/talon-webchat/`.
 **Build & deploy:**
 ```bash
 cd talon-webchat
-pnpm install
-pnpm run build
+corepack pnpm install
+corepack pnpm run build
 # Deploy dist/ to your web server or CDN
 ```
 

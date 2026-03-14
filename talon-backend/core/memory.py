@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 SQLite-backed memory service for Project Talon agents.
 
@@ -261,7 +263,7 @@ async def append_message(
 
 # ─── Episodic memory ──────────────────────────────────────────────────────────
 
-async def store_episodic(agent_id: str, summary: str, tags: list[str] | None = None) -> None:
+async def store_episodic(agent_id: str, summary: str, tags: Optional[list[str]] = None) -> None:
     tags = tags or []
     async with aiosqlite.connect(_DB_PATH) as db:
         await db.execute(
@@ -467,7 +469,7 @@ async def create_hitl_request(
     reason: str,
     risk_level: str = "medium",
     requested_by: Optional[str] = None,
-    details: dict[str, Any] | None = None,
+    details: Optional[dict[str, Any]] = None,
 ) -> dict:
     created_at = time.time()
     details_str = json.dumps(details or {}, ensure_ascii=False, default=str)

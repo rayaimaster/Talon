@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 ReAct Loop Engine for Project Talon.
 
@@ -446,7 +448,7 @@ async def _safe_ws_call(callback: WsCallback, event: dict) -> None:
 
 
 # ── Module-level singleton ────────────────────────────────────────────────────
-_react_loop: ReActLoop | None = None
+_react_loop: Optional[ReActLoop] = None
 
 
 def get_react_loop() -> ReActLoop:

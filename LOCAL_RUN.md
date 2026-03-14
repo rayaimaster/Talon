@@ -163,7 +163,7 @@ Open a second terminal:
 ```bash
 cd /Users/ruiliu/Documents/Codex/EntAgentv2/code/talon-webchat
 corepack pnpm install --frozen-lockfile
-VITE_API_URL=http://localhost:8000 pnpm dev -- --host 0.0.0.0 --port 5173
+VITE_API_URL=http://localhost:8000 corepack pnpm dev -- --host 0.0.0.0 --port 5173
 ```
 
 Open:
@@ -183,7 +183,7 @@ cd /Users/ruiliu/Documents/Codex/EntAgentv2/code/talon-app
 corepack pnpm install --frozen-lockfile
 VITE_API_URL=http://localhost:8000 \
 VITE_ADMIN_API_TOKEN=local-dev-token \
-pnpm dev -- --host 0.0.0.0 --port 5174
+corepack pnpm dev -- --host 0.0.0.0 --port 5174
 ```
 
 Open:

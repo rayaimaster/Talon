@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 GitHub Issues integration tool.
 
@@ -88,7 +90,7 @@ def _resolve_repo(repo: Optional[str]) -> str:
     return resolved
 
 
-def _get_live_config() -> tuple[str, str] | None:
+def _get_live_config() -> Optional[tuple[str, str]]:
     if get_github_mode() == "disabled":
         return None
     missing = _get_missing_live_config()

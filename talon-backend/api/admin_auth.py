@@ -1,16 +1,19 @@
+from __future__ import annotations
+
 """
 Shared admin authentication helpers for operational endpoints.
 """
 
 import logging
 import os
+from typing import Optional
 
 from fastapi import Header, HTTPException, status
 
 logger = logging.getLogger(__name__)
 
 
-def require_admin_token(x_admin_token: str | None = Header(default=None)) -> None:
+def require_admin_token(x_admin_token: Optional[str] = Header(default=None)) -> None:
     """Require a matching X-Admin-Token header for protected routes."""
     configured_token = os.environ.get("ADMIN_API_TOKEN", "").strip()
     if not configured_token:

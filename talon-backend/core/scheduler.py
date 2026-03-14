@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Simple recurring job scheduler for Project Talon.
 """
@@ -193,7 +195,7 @@ class SchedulerService:
             )
 
 
-_scheduler_service: SchedulerService | None = None
+_scheduler_service: Optional[SchedulerService] = None
 
 
 def get_scheduler_service() -> SchedulerService:

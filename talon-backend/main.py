@@ -28,6 +28,26 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
+
+def _get_cors_origins() -> list[str]:
+    """Return the explicit set of CORS origins allowed to access the API."""
+    configured = os.environ.get("CORS_ORIGINS", "").strip()
+    if configured:
+        origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
+        if origins:
+            return origins
+
+    return [
+        "http://localhost:3000",
+        "http://127.0.0.1:3000",
+        "http://localhost:3001",
+        "http://127.0.0.1:3001",
+        "http://localhost:4173",
+        "http://127.0.0.1:4173",
+        "http://localhost:5173",
+        "http://127.0.0.1:5173",
+    ]
+
 # ── Import core modules (after env is loaded) ─────────────────────────────────
 from core import memory, policy
 from core.scheduler import get_scheduler_service
@@ -300,26 +320,6 @@ def _get_teams_integration_status() -> str:
     if app_id_set or password_set:
         return "partially configured"
     return "not configured"
-
-
-def _get_cors_origins() -> list[str]:
-    """Return the explicit set of CORS origins allowed to access the API."""
-    configured = os.environ.get("CORS_ORIGINS", "").strip()
-    if configured:
-        origins = [origin.strip() for origin in configured.split(",") if origin.strip()]
-        if origins:
-            return origins
-
-    return [
-        "http://localhost:3000",
-        "http://127.0.0.1:3000",
-        "http://localhost:3001",
-        "http://127.0.0.1:3001",
-        "http://localhost:4173",
-        "http://127.0.0.1:4173",
-        "http://localhost:5173",
-        "http://127.0.0.1:5173",
-    ]
 
 
 def _check_provider_keys(agents: dict) -> None:

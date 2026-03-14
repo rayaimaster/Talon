@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Audit trail logger for Project Talon.
 
@@ -19,7 +21,7 @@ logger = logging.getLogger(__name__)
 async def log_event(
     agent_id: str,
     event_type: str,
-    details: dict[str, Any] | None = None,
+    details: Optional[dict[str, Any]] = None,
     user_id: Optional[str] = None,
     conversation_id: Optional[str] = None,
 ) -> None:

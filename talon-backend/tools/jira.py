@@ -1,3 +1,5 @@
+from __future__ import annotations
+
 """
 Jira integration tool.
 
@@ -72,7 +74,7 @@ def _misconfigured_message() -> str:
     )
 
 
-def _get_live_config() -> tuple[str, str, str] | None:
+def _get_live_config() -> Optional[tuple[str, str, str]]:
     if get_jira_mode() == "disabled":
         return None
     missing = _get_missing_live_config()
