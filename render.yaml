@@ -1,0 +1,91 @@
+services:
+  - type: web
+    name: talon-backend
+    runtime: python
+    rootDir: talon-backend
+    plan: starter
+    buildCommand: pip install -r requirements.txt
+    startCommand: uvicorn main:app --host 0.0.0.0 --port $PORT
+    healthCheckPath: /api/health
+    envVars:
+      - fromGroup: talon-backend-shared
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: LOCAL_LLM_BASE_URL
+        sync: false
+      - key: LOCAL_LLM_API_KEY
+        sync: false
+      - key: DATABASE_URL
+        value: sqlite:////opt/render/project/src/talon-data/talon.db
+      - key: CORS_ORIGINS
+        sync: false
+      - key: ADMIN_API_TOKEN
+        sync: false
+      - key: TEAMS_APP_ID
+        sync: false
+      - key: TEAMS_APP_PASSWORD
+        sync: false
+      - key: SKIP_SIGNATURE_VERIFICATION
+        value: "false"
+      - key: JIRA_MODE
+        value: disabled
+      - key: JIRA_BASE_URL
+        sync: false
+      - key: JIRA_EMAIL
+        sync: false
+      - key: JIRA_API_TOKEN
+        sync: false
+      - key: GITHUB_MODE
+        value: disabled
+      - key: GITHUB_TOKEN
+        sync: false
+      - key: GITHUB_REPO
+        sync: false
+      - key: SERVICENOW_MODE
+        value: disabled
+      - key: SERVICENOW_BASE_URL
+        sync: false
+      - key: SERVICENOW_USERNAME
+        sync: false
+      - key: SERVICENOW_PASSWORD
+        sync: false
+      - key: SERVICENOW_TABLE
+        value: incident
+      - key: MCP_SERVERS_JSON
+        sync: false
+      - key: MCP_TOOL_TIMEOUT
+        value: "30"
+      - key: POLICY_ENGINE
+        value: legacy
+      - key: OPA_BASE_URL
+        sync: false
+      - key: OPA_FAIL_MODE
+        value: closed
+    disk:
+      name: talon-data
+      mountPath: /opt/render/project/src/talon-data
+      sizeGB: 10
+
+  - type: web
+    name: talon-webchat
+    runtime: static
+    rootDir: talon-webchat
+    buildCommand: corepack enable && pnpm install --frozen-lockfile && pnpm exec tsc -b && pnpm exec vite build
+    staticPublishPath: ./dist
+    envVars:
+      - key: VITE_API_URL
+        sync: false
+    routes:
+      - type: rewrite
+        source: /*
+        destination: /index.html
+
+envVarGroups:
+  - name: talon-backend-shared
+    envVars:
+      - key: LOG_LEVEL
+        value: INFO
