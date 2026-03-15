@@ -656,7 +656,7 @@ sequenceDiagram
     Loop1->>Provider: chat(messages, tools)
     alt Tool use
         Loop1-->>Browser: tool_call
-        Loop->>Registry: execute_tool(...)
+        Loop1->>Registry: execute_tool(...)
         Registry-->>Loop1: tool result
         Loop1-->>Browser: tool_result
         Loop1->>Provider: chat(updated messages, tools)
