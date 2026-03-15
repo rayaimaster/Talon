@@ -266,6 +266,109 @@ The loop is shared by:
 - direct admin test messages
 - scheduler-triggered runs
 
+The concrete implementation entrypoint is `ReActLoop.run(...)`. The runtime
+pattern is:
+
+1. read the kill-switch state from `core/memory.py`
+2. evaluate the inbound message with `core/policy.py`
+3. load prior conversation history from `core/memory.py`
+4. persist the new user message and audit the inbound event
+5. resolve the provider and model through `ProviderFactory.from_agent_config(...)`
+6. build the tool schema list through `tools/registry.py`
+7. call `provider.chat(...)`
+8. if the provider ends the turn, persist and return the assistant response
+9. if the provider requests tools, persist the assistant tool-use blocks, execute tools, append `tool_result` blocks, and call the provider again
+10. after completion, trigger background summarisation for episodic memory
+
+Internally, Talon stores conversation history in Anthropic-style content-block
+format even when the active provider is OpenAI-compatible, Gemini, or a local
+OpenAI-style model. This is why `core/react_loop.py` converts responses into a
+shared content-block format before writing them to SQLite.
+
+#### ReAct Execution Sequence
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Client as "Web chat / Teams / Admin / Scheduler"
+    participant Entry as "Channel or API entrypoint"
+    participant Loop as "ReActLoop.run()"
+    participant Memory as "core/memory.py"
+    participant Policy as "core/policy.py"
+    participant Providers as "core/llm_providers.py"
+    participant Registry as "tools/registry.py"
+    participant Tool as "Concrete tool"
+    participant Audit as "core/audit.py"
+
+    Client->>Entry: Submit message or scheduled prompt
+    Entry->>Loop: run(agent_config, message, conversation_id, user_id, ws_callback?)
+    Loop->>Memory: get_kill_switch_state()
+    Memory-->>Loop: active / inactive
+    Loop->>Policy: check_message_async(message)
+    Policy-->>Loop: allow / block + reason
+    alt Blocked by policy
+        Loop->>Audit: log_event(policy_blocked)
+        Loop-->>Entry: Return blocked response
+        Entry-->>Client: Error or refusal text
+    else Allowed
+        Loop->>Memory: get_conversation_history(conversation_id, agent_id)
+        Memory-->>Loop: prior messages
+        Loop->>Memory: append_message(user)
+        Loop->>Audit: log_event(message_received)
+        Loop->>Providers: ProviderFactory.from_agent_config(...)
+        Providers-->>Loop: provider + model
+        Loop->>Registry: get_tool_definitions(agent_tools)
+        Registry-->>Loop: tool schemas
+
+        loop "Up to max_iterations"
+            Loop->>Providers: provider.chat(system, messages, tools)
+            Providers-->>Loop: LLMResponse(content, tool_calls, stop_reason, usage)
+
+            alt "stop_reason = end_turn"
+                Loop->>Memory: append_message(assistant)
+                Loop->>Audit: log_event(agent_response)
+                Loop-->>Entry: final_response
+            else "tool_use or tool_calls present"
+                Loop->>Memory: append_message(assistant tool_use blocks)
+                loop "For each tool call"
+                    Loop->>Policy: check_tool_call_async(tool_name, tool_input)
+                    Policy-->>Loop: allow / block
+                    alt Tool blocked
+                        Loop->>Audit: log_event(policy_blocked)
+                        Loop-->>Loop: build tool_result error block
+                    else Tool allowed
+                        Loop->>Registry: execute_tool(tool_name, tool_input)
+                        Registry->>Tool: invoke implementation
+                        Tool-->>Registry: textual result
+                        Registry-->>Loop: textual result
+                        Loop->>Audit: log_event(tool_call / tool_result)
+                    end
+                end
+                Loop->>Memory: append_message(user tool_result blocks)
+                Loop-->>Loop: continue with tool results in message history
+            end
+        end
+
+        Loop-->>Entry: final assistant text
+        Entry-->>Client: Final response
+        Loop-->>Loop: _maybe_summarise(...) in background
+    end
+```
+
+#### WebSocket Streaming Behavior
+
+When the caller is `channels/websocket.py`, the entrypoint passes a
+`ws_callback` into `ReActLoop.run(...)`. That callback is used to emit:
+
+- `typing` before the first provider call
+- `tool_call` before each tool executes
+- `tool_result` after each tool returns
+- `error` if the provider or runtime fails
+
+The final chat message is then sent by `channels/websocket.py` after
+`ReActLoop.run(...)` returns. Teams and scheduler executions do not use this
+incremental streaming path.
+
 ### 4.4 Provider Layer
 
 `core/llm_providers.py` abstracts provider-specific behavior behind a shared interface.
@@ -534,6 +637,35 @@ Current design assumption:
 9. final response is persisted and streamed back
 10. audit entries are written throughout
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Browser as "talon-webchat"
+    participant WS as "channels/websocket.py"
+    participant Loop as "core/react_loop.py"
+    participant Registry as "tools/registry.py"
+    participant Provider as "LLM provider"
+    participant DB as "SQLite"
+
+    Browser->>WS: Connect WS /ws/chat/{agent_id}/{session_id}
+    WS-->>Browser: welcome
+    Browser->>WS: {type: message, text, user}
+    WS->>Loop: run(..., ws_callback)
+    Loop-->>Browser: typing
+    Loop->>DB: load history + append user message
+    Loop->>Provider: chat(messages, tools)
+    alt Tool use
+        Loop-->>Browser: tool_call
+        Loop->>Registry: execute_tool(...)
+        Registry-->>Loop: tool result
+        Loop-->>Browser: tool_result
+        Loop->>Provider: chat(updated messages, tools)
+    end
+    Loop->>DB: append assistant message + audit
+    Loop-->>WS: final response text
+    WS-->>Browser: {type: message, text, agent, agent_id}
+```
+
 ### 9.2 Teams Request Flow
 
 1. Teams sends an activity to `POST /api/messages`
@@ -544,6 +676,25 @@ Current design assumption:
 6. Talon replies through the Bot Framework API
 7. audit events are recorded
 
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Teams as "Microsoft Teams"
+    participant Hook as "channels/teams.py"
+    participant Router as "channels/router.py"
+    participant Loop as "core/react_loop.py"
+    participant BotAPI as "Bot Framework API"
+
+    Teams->>Hook: POST /api/messages
+    Hook->>Hook: verify JWT unless bypassed
+    Hook->>Router: route_message(text, channel, mention)
+    Router-->>Hook: agent_config
+    Hook->>Loop: run(agent_config, text_clean, conversation_id, user_id)
+    Loop-->>Hook: final response text
+    Hook->>BotAPI: send_teams_reply(...)
+    BotAPI-->>Teams: posted reply
+```
+
 ### 9.3 Scheduled Job Flow
 
 1. admin creates a scheduled job
@@ -553,6 +704,26 @@ Current design assumption:
 5. prompt is executed through the ReAct loop
 6. run history and next-run time are persisted
 7. audit events are recorded
+
+```mermaid
+sequenceDiagram
+    autonumber
+    participant Admin as "talon-app admin"
+    participant SchedulesAPI as "api/schedules.py"
+    participant DB as "SQLite"
+    participant Scheduler as "core/scheduler.py"
+    participant Loop as "core/react_loop.py"
+
+    Admin->>SchedulesAPI: create schedule
+    SchedulesAPI->>DB: persist job
+    loop Background polling
+        Scheduler->>DB: list due jobs
+        Scheduler->>DB: claim due job
+        Scheduler->>Loop: run(agent_config, prompt, conversation_id, user_id=scheduler)
+        Loop-->>Scheduler: final response text
+        Scheduler->>DB: persist run history + next_run_at
+    end
+```
 
 ### 9.4 Policy Evaluation Flow
 
