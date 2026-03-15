@@ -292,7 +292,7 @@ sequenceDiagram
     autonumber
     participant Client as "Web chat / Teams / Admin / Scheduler"
     participant Entry as "Channel or API entrypoint"
-    participant Loop as "ReActLoop.run()"
+    participant Loop1 as "ReActLoop.run()"
     participant Memory as "core/memory.py"
     participant Policy as "core/policy.py"
     participant Providers as "core/llm_providers.py"
@@ -300,58 +300,58 @@ sequenceDiagram
     participant Tool as "Concrete tool"
     participant Audit as "core/audit.py"
 
-    Client->>Entry: Submit message or scheduled prompt
-    Entry->>Loop: run(agent_config, message, conversation_id, user_id, ws_callback?)
-    Loop->>Memory: get_kill_switch_state()
-    Memory-->>Loop: active / inactive
-    Loop->>Policy: check_message_async(message)
-    Policy-->>Loop: allow / block + reason
+    Client->>Entry: "Submit message or scheduled prompt"
+    Entry->>Loop1: "run(agent_config, message, conversation_id, user_id, ws_callback?)"
+    Loop1->>Memory: "get_kill_switch_state()"
+    Memory-->>Loop1: active / inactive
+    Loop1->>Policy: check_message_async(message)
+    Policy-->>Loop1: allow / block + reason
     alt Blocked by policy
-        Loop->>Audit: log_event(policy_blocked)
-        Loop-->>Entry: Return blocked response
+        Loop1->>Audit: log_event(policy_blocked)
+        Loop1-->>Entry: Return blocked response
         Entry-->>Client: Error or refusal text
     else Allowed
-        Loop->>Memory: get_conversation_history(conversation_id, agent_id)
-        Memory-->>Loop: prior messages
-        Loop->>Memory: append_message(user)
-        Loop->>Audit: log_event(message_received)
-        Loop->>Providers: ProviderFactory.from_agent_config(...)
-        Providers-->>Loop: provider + model
-        Loop->>Registry: get_tool_definitions(agent_tools)
-        Registry-->>Loop: tool schemas
+        Loop1->>Memory: get_conversation_history(conversation_id, agent_id)
+        Memory-->>Loop1: prior messages
+        Loop1->>Memory: append_message(user)
+        Loop1->>Audit: log_event(message_received)
+        Loop1->>Providers: ProviderFactory.from_agent_config(...)
+        Providers-->>Loop1: provider + model
+        Loop1->>Registry: get_tool_definitions(agent_tools)
+        Registry-->>Loop1: tool schemas
 
         loop "Up to max_iterations"
-            Loop->>Providers: provider.chat(system, messages, tools)
-            Providers-->>Loop: LLMResponse(content, tool_calls, stop_reason, usage)
+            Loop1->>Providers: provider.chat(system, messages, tools)
+            Providers-->>Loop1: LLMResponse(content, tool_calls, stop_reason, usage)
 
             alt "stop_reason = end_turn"
-                Loop->>Memory: append_message(assistant)
-                Loop->>Audit: log_event(agent_response)
-                Loop-->>Entry: final_response
+                Loop1->>Memory: append_message(assistant)
+                Loop1->>Audit: log_event(agent_response)
+                Loop1-->>Entry: final_response
             else "tool_use or tool_calls present"
-                Loop->>Memory: append_message(assistant tool_use blocks)
+                Loop1->>Memory: append_message(assistant tool_use blocks)
                 loop "For each tool call"
-                    Loop->>Policy: check_tool_call_async(tool_name, tool_input)
-                    Policy-->>Loop: allow / block
+                    Loop1->>Policy: check_tool_call_async(tool_name, tool_input)
+                    Policy-->>Loop1: allow / block
                     alt Tool blocked
-                        Loop->>Audit: log_event(policy_blocked)
-                        Loop-->>Loop: build tool_result error block
+                        Loop1->>Audit: log_event(policy_blocked)
+                        Loop1-->>Loop1: build tool_result error block
                     else Tool allowed
-                        Loop->>Registry: execute_tool(tool_name, tool_input)
+                        Loop1->>Registry: execute_tool(tool_name, tool_input)
                         Registry->>Tool: invoke implementation
                         Tool-->>Registry: textual result
-                        Registry-->>Loop: textual result
-                        Loop->>Audit: log_event(tool_call / tool_result)
+                        Registry-->>Loop1: textual result
+                        Loop1->>Audit: log_event(tool_call / tool_result)
                     end
                 end
-                Loop->>Memory: append_message(user tool_result blocks)
-                Loop-->>Loop: continue with tool results in message history
+                Loop1->>Memory: append_message(user tool_result blocks)
+                Loop1-->>Loop1: continue with tool results in message history
             end
         end
 
-        Loop-->>Entry: final assistant text
+        Loop1-->>Entry: final assistant text
         Entry-->>Client: Final response
-        Loop-->>Loop: _maybe_summarise(...) in background
+        Loop1-->>Loop1: _maybe_summarise(...) in background
     end
 ```
 
@@ -642,7 +642,7 @@ sequenceDiagram
     autonumber
     participant Browser as "talon-webchat"
     participant WS as "channels/websocket.py"
-    participant Loop as "core/react_loop.py"
+    participant Loop1 as "core/react_loop.py"
     participant Registry as "tools/registry.py"
     participant Provider as "LLM provider"
     participant DB as "SQLite"
@@ -650,19 +650,19 @@ sequenceDiagram
     Browser->>WS: Connect WS /ws/chat/{agent_id}/{session_id}
     WS-->>Browser: welcome
     Browser->>WS: {type: message, text, user}
-    WS->>Loop: run(..., ws_callback)
-    Loop-->>Browser: typing
-    Loop->>DB: load history + append user message
-    Loop->>Provider: chat(messages, tools)
+    WS->>Loop1: run(..., ws_callback)
+    Loop1-->>Browser: typing
+    Loop1->>DB: load history + append user message
+    Loop1->>Provider: chat(messages, tools)
     alt Tool use
-        Loop-->>Browser: tool_call
-        Loop->>Registry: execute_tool(...)
-        Registry-->>Loop: tool result
-        Loop-->>Browser: tool_result
-        Loop->>Provider: chat(updated messages, tools)
+        Loop1-->>Browser: tool_call
+        Loop1->>Registry: execute_tool(...)
+        Registry-->>Loop1: tool result
+        Loop1-->>Browser: tool_result
+        Loop1->>Provider: chat(updated messages, tools)
     end
-    Loop->>DB: append assistant message + audit
-    Loop-->>WS: final response text
+    Loop1->>DB: append assistant message + audit
+    Loop1-->>WS: final response text
     WS-->>Browser: {type: message, text, agent, agent_id}
 ```
 
@@ -682,15 +682,15 @@ sequenceDiagram
     participant Teams as "Microsoft Teams"
     participant Hook as "channels/teams.py"
     participant Router as "channels/router.py"
-    participant Loop as "core/react_loop.py"
+    participant Loop1 as "core/react_loop.py"
     participant BotAPI as "Bot Framework API"
 
     Teams->>Hook: POST /api/messages
     Hook->>Hook: verify JWT unless bypassed
     Hook->>Router: route_message(text, channel, mention)
     Router-->>Hook: agent_config
-    Hook->>Loop: run(agent_config, text_clean, conversation_id, user_id)
-    Loop-->>Hook: final response text
+    Hook->>Loop1: run(agent_config, text_clean, conversation_id, user_id)
+    Loop1-->>Hook: final response text
     Hook->>BotAPI: send_teams_reply(...)
     BotAPI-->>Teams: posted reply
 ```
@@ -712,15 +712,15 @@ sequenceDiagram
     participant SchedulesAPI as "api/schedules.py"
     participant DB as "SQLite"
     participant Scheduler as "core/scheduler.py"
-    participant Loop as "core/react_loop.py"
+    participant Loop1 as "core/react_loop.py"
 
     Admin->>SchedulesAPI: create schedule
     SchedulesAPI->>DB: persist job
     loop Background polling
         Scheduler->>DB: list due jobs
         Scheduler->>DB: claim due job
-        Scheduler->>Loop: run(agent_config, prompt, conversation_id, user_id=scheduler)
-        Loop-->>Scheduler: final response text
+        Scheduler->>Loop1: run(agent_config, prompt, conversation_id, user_id=scheduler)
+        Loop1-->>Scheduler: final response text
         Scheduler->>DB: persist run history + next_run_at
     end
 ```
