@@ -300,58 +300,58 @@ sequenceDiagram
     participant Tool as "Concrete tool"
     participant Audit as "core/audit.py"
 
-    Client->>Entry: Submit message or scheduled prompt
-    Entry->>Loop: run(agent_config, message, conversation_id, user_id, ws_callback?)
-    Loop->>Memory: get_kill_switch_state()
-    Memory-->>Loop: active / inactive
-    Loop->>Policy: check_message_async(message)
-    Policy-->>Loop: allow / block + reason
+    Client-->Entry: Submit message or scheduled prompt
+    Entry-->Loop: run(agent_config, message, conversation_id, user_id, ws_callback?)
+    Loop-->Memory: get_kill_switch_state()
+    Memory-->Loop: active / inactive
+    Loop-->Policy: check_message_async(message)
+    Policy-->Loop: allow / block + reason
     alt Blocked by policy
-        Loop->>Audit: log_event(policy_blocked)
-        Loop-->>Entry: Return blocked response
-        Entry-->>Client: Error or refusal text
+        Loop-->Audit: log_event(policy_blocked)
+        Loop-->Entry: Return blocked response
+        Entry-->Client: Error or refusal text
     else Allowed
-        Loop->>Memory: get_conversation_history(conversation_id, agent_id)
-        Memory-->>Loop: prior messages
-        Loop->>Memory: append_message(user)
-        Loop->>Audit: log_event(message_received)
-        Loop->>Providers: ProviderFactory.from_agent_config(...)
-        Providers-->>Loop: provider + model
-        Loop->>Registry: get_tool_definitions(agent_tools)
-        Registry-->>Loop: tool schemas
+        Loop-->Memory: get_conversation_history(conversation_id, agent_id)
+        Memory-->Loop: prior messages
+        Loop-->Memory: append_message(user)
+        Loop-->Audit: log_event(message_received)
+        Loop-->Providers: ProviderFactory.from_agent_config(...)
+        Providers-->Loop: provider + model
+        Loop-->Registry: get_tool_definitions(agent_tools)
+        Registry-->Loop: tool schemas
 
         loop "Up to max_iterations"
-            Loop->>Providers: provider.chat(system, messages, tools)
-            Providers-->>Loop: LLMResponse(content, tool_calls, stop_reason, usage)
+            Loop-->Providers: provider.chat(system, messages, tools)
+            Providers-->Loop: LLMResponse(content, tool_calls, stop_reason, usage)
 
             alt "stop_reason = end_turn"
-                Loop->>Memory: append_message(assistant)
-                Loop->>Audit: log_event(agent_response)
-                Loop-->>Entry: final_response
+                Loop-->Memory: append_message(assistant)
+                Loop-->Audit: log_event(agent_response)
+                Loop-->Entry: final_response
             else "tool_use or tool_calls present"
-                Loop->>Memory: append_message(assistant tool_use blocks)
+                Loop-->Memory: append_message(assistant tool_use blocks)
                 loop "For each tool call"
-                    Loop->>Policy: check_tool_call_async(tool_name, tool_input)
-                    Policy-->>Loop: allow / block
+                    Loop-->Policy: check_tool_call_async(tool_name, tool_input)
+                    Policy-->Loop: allow / block
                     alt Tool blocked
-                        Loop->>Audit: log_event(policy_blocked)
-                        Loop-->>Loop: build tool_result error block
+                        Loop-->Audit: log_event(policy_blocked)
+                        Loop-->Loop: build tool_result error block
                     else Tool allowed
-                        Loop->>Registry: execute_tool(tool_name, tool_input)
-                        Registry->>Tool: invoke implementation
-                        Tool-->>Registry: textual result
-                        Registry-->>Loop: textual result
-                        Loop->>Audit: log_event(tool_call / tool_result)
+                        Loop-->Registry: execute_tool(tool_name, tool_input)
+                        Registry-->Tool: invoke implementation
+                        Tool-->Registry: textual result
+                        Registry-->Loop: textual result
+                        Loop-->Audit: log_event(tool_call / tool_result)
                     end
                 end
-                Loop->>Memory: append_message(user tool_result blocks)
-                Loop-->>Loop: continue with tool results in message history
+                Loop-->Memory: append_message(user tool_result blocks)
+                Loop-->Loop: continue with tool results in message history
             end
         end
 
-        Loop-->>Entry: final assistant text
-        Entry-->>Client: Final response
-        Loop-->>Loop: _maybe_summarise(...) in background
+        Loop-->Entry: final assistant text
+        Entry-->Client: Final response
+        Loop-->Loop: _maybe_summarise(...) in background
     end
 ```
 
